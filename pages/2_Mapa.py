@@ -1,4 +1,4 @@
-# Página de Mapa: Coropletas de precipitación por provincia española (versión mejorada)
+# Page: Choropleth of precipitation by Spanish province (improved version)
 import streamlit as st
 import pandas as pd
 import requests
@@ -7,30 +7,33 @@ import unicodedata
 from utils.load_data import load_precip_data
 
 # -----------------------------
-# CONFIGURACIÓN DE LA PÁGINA
+# PAGE CONFIGURATION
 # -----------------------------
-st.set_page_config(page_title="Mapa - Precipitaciones 2021", layout="wide")
-st.title("🗺️ Mapa — Precipitación por provincia (2021)")
-st.sidebar.header("Opciones de mapa")
+st.set_page_config(page_title="Map - Precipitation 2021", layout="wide")
+st.title("🗺️ Map — Precipitation by Province (2021)")
+st.sidebar.header("Map options")
 
 # -----------------------------
-# CARGAR DATOS
+# LOAD DATA
 # -----------------------------
 df = load_precip_data()
+# Standardize column name for province
 if "region" in df.columns:
     df = df.rename(columns={"region": "Provincia"})
 
+# List of months
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
-mes = st.sidebar.selectbox("Mes / Anual", options=["anual"] + MESES, index=0)
-provincia_seleccion = st.sidebar.selectbox("Resaltar provincia", options=["Ninguna"] + sorted(df["Provincia"].unique()))
+# Sidebar selections
+mes = st.sidebar.selectbox("Month / Annual", options=["anual"] + MESES, index=0)
+provincia_seleccion = st.sidebar.selectbox("Highlight province", options=["Ninguna"] + sorted(df["Provincia"].unique()))
 
 # -----------------------------
-# FUNCIÓN DE NORMALIZACIÓN
+# NORMALIZATION FUNCTION
 # -----------------------------
 def normalize(s):
-    """Normaliza texto a minúsculas y sin acentos para comparación."""
+    """Normalize text to lowercase ASCII for fuzzy matching."""
     if s is None:
         return ""
     s = str(s).strip().lower()
@@ -42,21 +45,21 @@ def normalize(s):
     return s
 
 # -----------------------------
-# CARGAR GEOJSON
+# LOAD GEOJSON
 # -----------------------------
 GEOJSON_URL = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-provinces.geojson"
 try:
     geojson = requests.get(GEOJSON_URL, timeout=20).json()
 except Exception:
-    st.error("No se pudo cargar el GeoJSON remoto. Verifica conexión o usa un archivo local.")
+    st.error("Could not load remote GeoJSON. Check your connection or use a local file.")
     st.stop()
 
-# Normalizamos nombres en GeoJSON
+# Normalize province names in GeoJSON
 for f in geojson["features"]:
     f["properties"]["name_norm"] = normalize(f["properties"].get("name"))
 
 # -----------------------------
-# MAPEO MANUAL CSV -> GEOJSON
+# MANUAL CSV -> GEOJSON MAPPING
 # -----------------------------
 PROV_MAPPING = {
     "Alicante": "Alicante",
@@ -99,19 +102,22 @@ PROV_MAPPING = {
 }
 
 # -----------------------------
-# PREPARAR DATOS PARA EL MAPA
+# PREPARE DATA FOR MAP
 # -----------------------------
 df_map = df.groupby("Provincia", as_index=False).agg({mes: "mean"})
 df_map["geo_name"] = df_map["Provincia"].map(PROV_MAPPING)
 plot_df = df_map.dropna(subset=["geo_name"]).copy()
 plot_df["geo_norm"] = plot_df["geo_name"].apply(normalize)
 
-# Resaltar la provincia seleccionada
-plot_df["resaltar"] = plot_df["Provincia"].apply(lambda x: "Seleccionada" if x == provincia_seleccion else "Normal")
-color_discrete_map = {"Seleccionada": "red", "Normal": "blue"}
+# Ensure color column is numeric
+plot_df[mes] = pd.to_numeric(plot_df[mes], errors="coerce").fillna(0).round(1)
+
+# Highlight the selected province
+plot_df["highlight"] = plot_df["Provincia"].apply(lambda x: "Selected" if x == provincia_seleccion else "Normal")
+color_discrete_map = {"Selected": "red", "Normal": "blue"}
 
 # -----------------------------
-# GRAFICO COROPLETA MEJORADO CON MAPBOX
+# CHOROPLETH MAPBOX PLOT
 # -----------------------------
 fig = px.choropleth_mapbox(
     plot_df,
@@ -120,7 +126,7 @@ fig = px.choropleth_mapbox(
     featureidkey="properties.name_norm",
     color=mes,
     hover_name="Provincia",
-    hover_data={m: True for m in ["anual"] + MESES},  # todos los meses
+    hover_data={m: True for m in ["anual"] + MESES},
     labels={mes: "Precipitación (mm)"},
     color_continuous_scale="Viridis",
     mapbox_style="carto-positron",
@@ -130,12 +136,12 @@ fig = px.choropleth_mapbox(
     title=f"Mapa de precipitación — {mes.capitalize()}"
 )
 
-# Añadir marcador o color especial para provincia seleccionada
+# Optional: highlight province with marker (if lat/lon known, placeholder here)
 if provincia_seleccion != "Ninguna":
     sel_row = plot_df[plot_df["Provincia"] == provincia_seleccion]
     if not sel_row.empty:
         fig.add_scattermapbox(
-            lat=[40], lon=[-4],  # Placeholder: no lat/lon en dataset
+            lat=[40], lon=[-4],  # Placeholder: replace with real lat/lon if available
             mode="markers+text",
             marker=dict(size=14, color="red"),
             text=[provincia_seleccion],
@@ -151,8 +157,12 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
-# TABLA DE DATOS
+# DATA TABLE
 # -----------------------------
 st.markdown("---")
 st.subheader("Datos de precipitación por provincia")
-st.dataframe(plot_df[["Provincia", "anual"] + MESES].sort_values(mes, ascending=False).reset_index(drop=True))
+st.dataframe(
+    plot_df[["Provincia", "anual"] + MESES]
+    .sort_values(mes, ascending=False)
+    .reset_index(drop=True)
+)

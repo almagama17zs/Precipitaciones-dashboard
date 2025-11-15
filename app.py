@@ -2,8 +2,8 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from utils.load_data import load_precip_data
-from PIL import Image
 import os
+import base64
 
 # -----------------------------
 # PAGE CONFIGURATION
@@ -19,20 +19,24 @@ st.set_page_config(
 # -----------------------------
 css_path = "assets/style.css"
 if os.path.exists(css_path):
-    with open(css_path) as f:
+    with open(css_path, "r", encoding="utf-8") as f:
         css = f.read()
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 else:
     st.warning("No se encontró el CSS en assets/style.css")
 
 # -----------------------------
-# SIDEBAR LOGO (arriba)
+# SIDEBAR LOGO (arriba) con base64
 # -----------------------------
 logo_path = "assets/logo.png"
 if os.path.exists(logo_path):
-    # Insert logo directamente en el sidebar usando HTML para forzar arriba
+    with open(logo_path, "rb") as f:
+        logo_bytes = f.read()
+        logo_b64 = base64.b64encode(logo_bytes).decode()
     st.sidebar.markdown(
-        f'<div style="text-align:center;"><img src="assets/logo.png" width="70%"></div>',
+        f'<div style="text-align:center; margin-bottom:10px;">'
+        f'<img src="data:image/png;base64,{logo_b64}" style="width:70%;"/>'
+        f'</div>',
         unsafe_allow_html=True
     )
 

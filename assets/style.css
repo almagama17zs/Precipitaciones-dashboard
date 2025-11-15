@@ -10,20 +10,26 @@ div[data-testid="stSidebarContent"] {
     margin-top: 0 !important; /* Remove margin from top */
 }
 
-/* ===== Logo styling and spacing ===== */
+/* ===== Logo styling and spacing (top of sidebar) ===== */
 div[data-testid="stSidebar"] img {
     display: block; /* Center the image */
     margin-left: auto;
     margin-right: auto;
-    margin-top: 2px !important;  /* Reduce top space above logo */
-    margin-bottom: 2px !important; /* Reduce space below logo */
+    margin-top: 5px !important;   /* Top margin */
+    margin-bottom: 10px !important; /* Space below logo */
     width: 70% !important; /* Resize logo */
 }
 
-/* ===== Remove excessive spacing before sidebar headings ===== */
+/* ===== Sidebar headings spacing ===== */
 div[data-testid="stSidebarContent"] h2,
 div[data-testid="stSidebarContent"] h3,
 div[data-testid="stSidebarContent"] h4 {
     margin-top: 0 !important; /* Remove extra gap before titles */
     padding-top: 0 !important;
+}
+
+/* ===== Optional: improve sidebar selectbox spacing ===== */
+div[data-testid="stSidebar"] .stSelectbox {
+    margin-top: 5px !important;
+    margin-bottom: 5px !important;
 }

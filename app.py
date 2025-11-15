@@ -23,8 +23,10 @@ st.markdown("Visualización interactiva de la precipitación mensual y anual por
 # -----------------------------
 df = load_precip_data()
 
-# Standardize province column name
-df = df.rename(columns={"region": "Provincia"})
+# Ensure the province column exists (already standardized in load_data.py)
+if "Provincia" not in df.columns:
+    st.error("No se encontró la columna 'Provincia' en los datos.")
+    st.stop()
 
 # List of months in correct order
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -33,7 +35,7 @@ MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
 # -----------------------------
 # SIDEBAR — FILTERS
 # -----------------------------
-st.sidebar.header("Filters")
+st.sidebar.header("Filtros")
 
 provincia_seleccion = st.sidebar.selectbox(
     "Provincia:",
@@ -49,7 +51,7 @@ else:
 # -----------------------------
 # KPI METRICS
 # -----------------------------
-st.subheader("📊 General Indicators")
+st.subheader("📊 Indicadores generales")
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -58,20 +60,19 @@ media_nacional = df["anual"].mean()
 max_prov = df.loc[df["anual"].idxmax()]
 min_prov = df.loc[df["anual"].idxmin()]
 
-# Display KPIs
-col1.metric("💧 National annual mean", f"{media_nacional:.1f} mm")
-col2.metric("🌧️ Maximum annual", f"{max_prov['anual']} mm", max_prov["Provincia"])
-col3.metric("🌦️ Minimum annual", f"{min_prov['anual']} mm", min_prov["Provincia"])
-col4.metric("📍 Provinces analyzed", len(df))
+# Display KPIs in Spanish
+col1.metric("💧 Media anual nacional", f"{media_nacional:.1f} mm")
+col2.metric("🌧️ Provincia más lluviosa", f"{max_prov['anual']:.1f} mm", max_prov["Provincia"])
+col3.metric("🌦️ Provincia menos lluviosa", f"{min_prov['anual']:.1f} mm", min_prov["Provincia"])
+col4.metric("📍 Provincias analizadas", len(df))
 
 st.markdown("---")
 
 # -----------------------------
 # MONTHLY PRECIPITATION PLOT
 # -----------------------------
-st.subheader("📈 Monthly precipitation evolution")
+st.subheader("📈 Evolución mensual de precipitación")
 
-# Transform data from wide to long format
 df_melt = data_filtrada.melt(
     id_vars=["Provincia"],
     value_vars=MESES,
@@ -79,14 +80,13 @@ df_melt = data_filtrada.melt(
     value_name="Precipitación"
 )
 
-# Create line plot
 fig_line = px.line(
     df_melt,
     x="Mes",
     y="Precipitación",
     color="Provincia" if provincia_seleccion == "Todas" else None,
     markers=True,
-    title="Monthly precipitation"
+    title="Precipitación mensual"
 )
 
 st.plotly_chart(fig_line, use_container_width=True)
@@ -94,13 +94,13 @@ st.plotly_chart(fig_line, use_container_width=True)
 # -----------------------------
 # ANNUAL RANKING PLOT
 # -----------------------------
-st.subheader("🏆 Annual precipitation ranking by province")
+st.subheader("🏆 Ranking anual de precipitación por provincia")
 
 fig_bar = px.bar(
     df.sort_values("anual", ascending=False),
     x="Provincia",
     y="anual",
-    title="Annual ranking (mm)",
+    title="Ranking anual (mm)",
 )
 
 st.plotly_chart(fig_bar, use_container_width=True)
@@ -108,10 +108,11 @@ st.plotly_chart(fig_bar, use_container_width=True)
 # -----------------------------
 # DATA TABLE
 # -----------------------------
-st.subheader("🧾 Data table")
+st.subheader("🧾 Tabla de datos")
 
-# Display the filtered table with formatting
-st.dataframe(
-    data_filtrada.style.format("{:.1f}"),
-    use_container_width=True
-)
+# Format only numeric columns to avoid ValueError
+numeric_cols = data_filtrada.select_dtypes(include='number').columns
+df_display = data_filtrada.copy()
+df_display[numeric_cols] = df_display[numeric_cols].round(1)
+
+st.dataframe(df_display, use_container_width=True)

@@ -1,12 +1,12 @@
-# Precipitaciones-dashboard
+# 🌧️ Precipitaciones-dashboard
 
 Proyecto Streamlit para visualizar precipitaciones por provincia (2021).
 
-## Enlace 
+## 🔗 Enlace 
 
 https://precipitaciones-dashboard.streamlit.app/
 
-## Estructura
+## 🗂️ Estructura
 ```
 Precipitaciones-dashboard/
 ├── data/
@@ -19,10 +19,10 @@ Precipitaciones-dashboard/
 └── README.md
 ```
 
-## Datos
+## 📊 Datos
 Archivo usado: `data/PREC_2021_Provincias.csv` (preview of columns shown below).
 
-## Cómo ejecutar
+## ▶️ Cómo ejecutar
 1. Crear entorno: `python -m venv .venv && source .venv/bin/activate`
 2. `pip install -r requirements.txt`
 3. `streamlit run streamlit_app/app.py`

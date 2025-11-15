@@ -9,6 +9,9 @@ import plotly.express as px
 from utils.load_data import load_precip_data
 from utils.sidebar_style import apply_sidebar_style
 
+# -----------------------------
+# APPLY SIDEBAR STYLE (BLUE + BLACK TEXT + LOGO)
+# -----------------------------
 apply_sidebar_style()
 
 # -----------------------------

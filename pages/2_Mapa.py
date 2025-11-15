@@ -9,6 +9,9 @@ import base64
 from utils.load_data import load_precip_data
 from utils.sidebar_style import apply_sidebar_style
 
+# -----------------------------
+# APPLY SIDEBAR STYLE (BLUE + BLACK TEXT + LOGO)
+# -----------------------------
 apply_sidebar_style()
 
 # -----------------------------
@@ -131,7 +134,6 @@ if plot_df.empty:
 if mes not in plot_df.columns:
     st.error(f"Column '{mes}' not found in data.")
     st.stop()
-
 
 # -----------------------------
 # CHOROPLETH MAPBOX

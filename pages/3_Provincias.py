@@ -10,7 +10,11 @@ from utils.sidebar_style import apply_sidebar_style
 import folium
 from streamlit_folium import st_folium
 
+# -----------------------------
+# APPLY SIDEBAR STYLE (BLUE + BLACK TEXT + LOGO)
+# -----------------------------
 apply_sidebar_style()
+
 # -----------------------------
 # CONFIGURACIÓN DE LA PÁGINA
 # -----------------------------

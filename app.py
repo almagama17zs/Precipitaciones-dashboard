@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # -----------------------------
-# LOAD CUSTOM CSS
+# LOAD CUSTOM CSS (FORCE BLUE SIDEBAR)
 # -----------------------------
 css_path = "assets/style.css"
 if os.path.exists(css_path):
@@ -25,8 +25,54 @@ if os.path.exists(css_path):
 else:
     st.warning("No se encontró el CSS en assets/style.css")
 
+# Hack para barra lateral multi-page (clase interna de Streamlit)
+st.markdown("""
+<style>
+/* Sidebar general */
+div[data-testid="stSidebar"] {
+    background-color: #cce6ff !important;
+    padding: 0 !important;
+}
+
+/* Reduce top spacing */
+div[data-testid="stSidebarContent"] {
+    padding-top: 5px !important;
+    margin-top: 0 !important;
+}
+
+/* Logo styling */
+div[data-testid="stSidebar"] img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 5px !important;
+    margin-bottom: 10px !important;
+    width: 70% !important;
+}
+
+/* Sidebar headings spacing */
+div[data-testid="stSidebarContent"] h2,
+div[data-testid="stSidebarContent"] h3,
+div[data-testid="stSidebarContent"] h4 {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Optional: selectbox spacing */
+div[data-testid="stSidebar"] .stSelectbox {
+    margin-top: 5px !important;
+    margin-bottom: 5px !important;
+}
+
+/* Force blue background for multi-page menu (hack) */
+.css-18e3th9 { 
+    background-color: #cce6ff !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # -----------------------------
-# SIDEBAR LOGO (arriba) con base64
+# SIDEBAR LOGO (arriba) usando base64
 # -----------------------------
 logo_path = "assets/logo.png"
 if os.path.exists(logo_path):

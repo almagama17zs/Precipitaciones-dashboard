@@ -46,9 +46,13 @@ def normalize(s):
 GEOJSON_URL = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-provinces.geojson"
 try:
     geojson = requests.get(GEOJSON_URL, timeout=20).json()
-except Exception as e:
+except Exception:
     st.error("No se pudo cargar el GeoJSON remoto. Verifica conexión o usa un archivo local.")
     st.stop()
+
+# Normalizamos nombres en GeoJSON
+for f in geojson["features"]:
+    f["properties"]["name_norm"] = normalize(f["properties"].get("name"))
 
 # -----------------------------
 # MAPEO MANUAL CSV -> GEOJSON
@@ -90,8 +94,7 @@ PROV_MAPPING = {
     "Ciudad Real": "Ciudad Real",
     "Soria": "Soria",
     "Teruel": "Teruel",
-    "Huesca": "Huesca",
-    "Palmas": "Las Palmas"
+    "Huesca": "Huesca"
 }
 
 # -----------------------------
@@ -109,7 +112,7 @@ fig = px.choropleth(
     plot_df,
     geojson=geojson,
     locations="geo_norm",
-    featureidkey="properties.name",
+    featureidkey="properties.name_norm",  # ahora coincide con la normalización
     color=mes,
     hover_name="Provincia",
     hover_data={mes: True},

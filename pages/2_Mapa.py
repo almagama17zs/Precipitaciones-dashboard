@@ -1,4 +1,4 @@
-# Página de Mapa: Coropletas de precipitación por provincia española
+# Página de Mapa: Coropletas de precipitación por provincia española (versión mejorada)
 import streamlit as st
 import pandas as pd
 import requests
@@ -24,6 +24,7 @@ MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 mes = st.sidebar.selectbox("Mes / Anual", options=["anual"] + MESES, index=0)
+provincia_seleccion = st.sidebar.selectbox("Resaltar provincia", options=["Ninguna"] + sorted(df["Provincia"].unique()))
 
 # -----------------------------
 # FUNCIÓN DE NORMALIZACIÓN
@@ -105,23 +106,47 @@ df_map["geo_name"] = df_map["Provincia"].map(PROV_MAPPING)
 plot_df = df_map.dropna(subset=["geo_name"]).copy()
 plot_df["geo_norm"] = plot_df["geo_name"].apply(normalize)
 
+# Resaltar la provincia seleccionada
+plot_df["resaltar"] = plot_df["Provincia"].apply(lambda x: "Seleccionada" if x == provincia_seleccion else "Normal")
+color_discrete_map = {"Seleccionada": "red", "Normal": "blue"}
+
 # -----------------------------
-# GRAFICO COROPLETA
+# GRAFICO COROPLETA MEJORADO CON MAPBOX
 # -----------------------------
-fig = px.choropleth(
+fig = px.choropleth_mapbox(
     plot_df,
     geojson=geojson,
     locations="geo_norm",
-    featureidkey="properties.name_norm",  # ahora coincide con la normalización
+    featureidkey="properties.name_norm",
     color=mes,
     hover_name="Provincia",
-    hover_data={mes: True},
+    hover_data={m: True for m in ["anual"] + MESES},  # todos los meses
     labels={mes: "Precipitación (mm)"},
+    color_continuous_scale="Viridis",
+    mapbox_style="carto-positron",
+    center={"lat": 40, "lon": -4},
+    zoom=5,
+    opacity=0.7,
     title=f"Mapa de precipitación — {mes.capitalize()}"
 )
 
-fig.update_geos(fitbounds="locations", visible=False)
-fig.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+# Añadir marcador o color especial para provincia seleccionada
+if provincia_seleccion != "Ninguna":
+    sel_row = plot_df[plot_df["Provincia"] == provincia_seleccion]
+    if not sel_row.empty:
+        fig.add_scattermapbox(
+            lat=[40], lon=[-4],  # Placeholder: no lat/lon en dataset
+            mode="markers+text",
+            marker=dict(size=14, color="red"),
+            text=[provincia_seleccion],
+            textposition="top right",
+            showlegend=False
+        )
+
+fig.update_layout(
+    margin={"r":0,"t":50,"l":0,"b":0},
+    coloraxis_colorbar=dict(title="Precipitación (mm)", lenmode="fraction", len=0.6)
+)
 
 st.plotly_chart(fig, use_container_width=True)
 
@@ -130,4 +155,4 @@ st.plotly_chart(fig, use_container_width=True)
 # -----------------------------
 st.markdown("---")
 st.subheader("Datos de precipitación por provincia")
-st.dataframe(plot_df[["Provincia", mes]].sort_values(mes, ascending=False).reset_index(drop=True))
+st.dataframe(plot_df[["Provincia", "anual"] + MESES].sort_values(mes, ascending=False).reset_index(drop=True))

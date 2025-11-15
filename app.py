@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from utils.load_data import load_precip_data
+from PIL import Image
 
 # -----------------------------
 # PAGE CONFIGURATION
@@ -12,13 +13,23 @@ st.set_page_config(
     layout="wide"
 )
 
-import streamlit as st
+# -----------------------------
+# LOAD CUSTOM CSS
+# -----------------------------
+try:
+    with open("assets/style.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"No se pudo cargar el CSS: {e}")
 
-st.set_page_config(page_title="App", layout="wide")
-
-# Load custom CSS
-with open("assets/style.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# -----------------------------
+# SIDEBAR LOGO
+# -----------------------------
+try:
+    logo = Image.open("assets/logo.png")   # Cambia por tu nombre real si es diferente
+    st.sidebar.image(logo)
+except:
+    pass
 
 # -----------------------------
 # HEADER
@@ -31,12 +42,10 @@ st.markdown("Visualización interactiva de la precipitación mensual y anual por
 # -----------------------------
 df = load_precip_data()
 
-# Ensure the province column exists (already standardized in load_data.py)
 if "Provincia" not in df.columns:
     st.error("No se encontró la columna 'Provincia' en los datos.")
     st.stop()
 
-# List of months in correct order
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
@@ -50,7 +59,6 @@ provincia_seleccion = st.sidebar.selectbox(
     options=["Todas"] + sorted(df["Provincia"].unique())
 )
 
-# Apply province filter
 if provincia_seleccion != "Todas":
     data_filtrada = df[df["Provincia"] == provincia_seleccion]
 else:
@@ -63,12 +71,10 @@ st.subheader("📊 Indicadores generales")
 
 col1, col2, col3, col4 = st.columns(4)
 
-# Calculate KPI metrics
 media_nacional = df["anual"].mean()
 max_prov = df.loc[df["anual"].idxmax()]
 min_prov = df.loc[df["anual"].idxmin()]
 
-# Display KPIs in Spanish
 col1.metric("💧 Media anual nacional", f"{media_nacional:.1f} mm")
 col2.metric("🌧️ Provincia más lluviosa", f"{max_prov['anual']:.1f} mm", max_prov["Provincia"])
 col3.metric("🌦️ Provincia menos lluviosa", f"{min_prov['anual']:.1f} mm", min_prov["Provincia"])
@@ -108,7 +114,7 @@ fig_bar = px.bar(
     df.sort_values("anual", ascending=False),
     x="Provincia",
     y="anual",
-    title="Ranking anual (mm)",
+    title="Ranking anual (mm)"
 )
 
 st.plotly_chart(fig_bar, use_container_width=True)
@@ -118,7 +124,6 @@ st.plotly_chart(fig_bar, use_container_width=True)
 # -----------------------------
 st.subheader("🧾 Tabla de datos")
 
-# Format only numeric columns to avoid ValueError
 numeric_cols = data_filtrada.select_dtypes(include='number').columns
 df_display = data_filtrada.copy()
 df_display[numeric_cols] = df_display[numeric_cols].round(1)

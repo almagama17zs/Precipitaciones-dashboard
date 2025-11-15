@@ -20,7 +20,7 @@ def load_precip_data(year: int = 2021) -> pd.DataFrame:
         st.stop()
 
     # Load CSV
-    df = pd.read_csv(file_path, encoding="utf-8")
+    df = pd.read_csv(file_path, sep=';', encoding="utf-8")
 
     # Check if DataFrame is empty
     if df.empty:

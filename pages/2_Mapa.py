@@ -1,4 +1,4 @@
-# Page: Choropleth of precipitation by Spanish province (robust version)
+# Page: Choropleth of precipitation by Spanish province (fixed)
 import streamlit as st
 import pandas as pd
 import requests
@@ -24,7 +24,6 @@ MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 mes = st.sidebar.selectbox("Month / Annual", options=["anual"] + MESES, index=0)
-provincia_seleccion = st.sidebar.selectbox("Highlight province", options=["Ninguna"] + sorted(df["Provincia"].unique()))
 
 # -----------------------------
 # NORMALIZATION FUNCTION
@@ -52,8 +51,10 @@ except Exception:
     st.stop()
 
 # Normalize names in GeoJSON
+geo_names_set = set()
 for f in geojson["features"]:
     f["properties"]["name_norm"] = normalize(f["properties"].get("name"))
+    geo_names_set.add(f["properties"]["name_norm"])
 
 # -----------------------------
 # MANUAL CSV -> GEOJSON MAPPING
@@ -104,19 +105,18 @@ PROV_MAPPING = {
 df_map = df.groupby("Provincia", as_index=False).agg({mes: "mean"})
 df_map["geo_name"] = df_map["Provincia"].map(PROV_MAPPING)
 df_map["geo_norm"] = df_map["geo_name"].apply(normalize)
-# Ensure numeric color column
+
+# Ensure color column is numeric and fill NaN
 df_map[mes] = pd.to_numeric(df_map[mes], errors="coerce").fillna(0)
 
-# Filter only rows with valid geo mapping
-plot_df = df_map[df_map["geo_norm"].isin([f["properties"]["name_norm"] for f in geojson["features"]])].copy()
+# Filter only provinces present in GeoJSON
+plot_df = df_map[df_map["geo_norm"].isin(geo_names_set)].copy()
+if plot_df.empty:
+    st.error("No matching provinces found between CSV and GeoJSON.")
+    st.stop()
 
 # -----------------------------
-# HIGHLIGHT SELECTED PROVINCE
-# -----------------------------
-plot_df["highlight"] = plot_df["Provincia"].apply(lambda x: "Selected" if x == provincia_seleccion else "Normal")
-
-# -----------------------------
-# CHOROPLETH MAPBOX PLOT
+# CHOROPLETH MAPBOX
 # -----------------------------
 fig = px.choropleth_mapbox(
     plot_df,
@@ -125,7 +125,7 @@ fig = px.choropleth_mapbox(
     featureidkey="properties.name_norm",
     color=mes,
     hover_name="Provincia",
-    hover_data={m: True for m in ["anual"] + MESES},
+    hover_data={mes: True},
     labels={mes: "Precipitación (mm)"},
     color_continuous_scale="Viridis",
     mapbox_style="carto-positron",
@@ -135,11 +135,7 @@ fig = px.choropleth_mapbox(
     title=f"Mapa de precipitación — {mes.capitalize()}"
 )
 
-fig.update_layout(
-    margin={"r":0,"t":50,"l":0,"b":0},
-    coloraxis_colorbar=dict(title="Precipitación (mm)", lenmode="fraction", len=0.6)
-)
-
+fig.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------

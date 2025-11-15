@@ -116,3 +116,5 @@ df_display = data_filtrada.copy()
 df_display[numeric_cols] = df_display[numeric_cols].round(1)
 
 st.dataframe(df_display, use_container_width=True)
+
+

@@ -2,8 +2,8 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from utils.load_data import load_precip_data
-import os
 import base64
+import os
 
 # -----------------------------
 # PAGE CONFIGURATION
@@ -13,84 +13,6 @@ st.set_page_config(
     page_icon="🌧️",
     layout="wide"
 )
-
-# -----------------------------
-# LOAD CUSTOM CSS (FORCE BLUE SIDEBAR)
-# -----------------------------
-css_path = "assets/style.css"
-if os.path.exists(css_path):
-    with open(css_path, "r", encoding="utf-8") as f:
-        css = f.read()
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-else:
-    st.warning("No se encontró el CSS en assets/style.css")
-
-# Hack para barra lateral multi-page (clase interna de Streamlit)
-st.markdown("""
-<style>
-/* Sidebar general */
-div[data-testid="stSidebar"] {
-    background-color: #cce6ff !important;
-    padding: 0 !important;
-}
-
-/* Reduce top spacing */
-div[data-testid="stSidebarContent"] {
-    padding-top: 5px !important;
-    margin-top: 0 !important;
-}
-
-/* Logo styling */
-div[data-testid="stSidebar"] img {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 5px !important;
-    margin-bottom: 10px !important;
-    width: 70% !important;
-}
-
-/* Sidebar headings spacing */
-div[data-testid="stSidebarContent"] h2,
-div[data-testid="stSidebarContent"] h3,
-div[data-testid="stSidebarContent"] h4 {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-/* Optional: selectbox spacing */
-div[data-testid="stSidebar"] .stSelectbox {
-    margin-top: 5px !important;
-    margin-bottom: 5px !important;
-}
-
-/* Force blue background for multi-page menu (hack) */
-.css-18e3th9 { 
-    background-color: #cce6ff !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# -----------------------------
-# SIDEBAR LOGO (arriba) usando base64
-# -----------------------------
-logo_path = "assets/logo.png"
-if os.path.exists(logo_path):
-    with open(logo_path, "rb") as f:
-        logo_bytes = f.read()
-        logo_b64 = base64.b64encode(logo_bytes).decode()
-    st.sidebar.markdown(
-        f'<div style="text-align:center; margin-bottom:10px;">'
-        f'<img src="data:image/png;base64,{logo_b64}" style="width:70%;"/>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-# -----------------------------
-# HEADER
-# -----------------------------
-st.title("🌧️ Dashboard de Precipitaciones en España — 2021")
-st.markdown("Visualización interactiva de la precipitación mensual y anual por provincias.")
 
 # -----------------------------
 # LOAD DATA
@@ -104,9 +26,25 @@ MESES = ["enero","febrero","marzo","abril","mayo","junio",
          "julio","agosto","septiembre","octubre","noviembre","diciembre"]
 
 # -----------------------------
-# SIDEBAR — FILTERS
+# SIDEBAR: BLUE BLOCK + LOGO + FILTERS
 # -----------------------------
-st.sidebar.header("Filtros")
+logo_path = "assets/logo.png"
+logo_b64 = ""
+if os.path.exists(logo_path):
+    with open(logo_path, "rb") as f:
+        logo_bytes = f.read()
+        logo_b64 = base64.b64encode(logo_bytes).decode()
+
+# HTML for sidebar with integrated filters
+sidebar_html = f"""
+<div style="background-color:#cce6ff; padding:20px; border-radius:10px; text-align:center;">
+    <img src="data:image/png;base64,{logo_b64}" style="width:70%; margin-bottom:15px;"/>
+    <h3 style="margin-top:0; margin-bottom:10px;">Filtros</h3>
+</div>
+"""
+st.sidebar.markdown(sidebar_html, unsafe_allow_html=True)
+
+# Place filters inside sidebar (below the blue block)
 provincia_seleccion = st.sidebar.selectbox(
     "Provincia:",
     options=["Todas"] + sorted(df["Provincia"].unique())
@@ -114,7 +52,13 @@ provincia_seleccion = st.sidebar.selectbox(
 data_filtrada = df if provincia_seleccion == "Todas" else df[df["Provincia"] == provincia_seleccion]
 
 # -----------------------------
-# KPIs
+# HEADER
+# -----------------------------
+st.title("🌧️ Dashboard de Precipitaciones en España — 2021")
+st.markdown("Visualización interactiva de la precipitación mensual y anual por provincias.")
+
+# -----------------------------
+# KPI METRICS
 # -----------------------------
 st.subheader("📊 Indicadores generales")
 col1, col2, col3, col4 = st.columns(4)
@@ -124,7 +68,6 @@ min_prov = df.loc[df['anual'].idxmin()]
 col2.metric("🌧️ Provincia más lluviosa", f"{max_prov['anual']:.1f} mm", max_prov["Provincia"])
 col3.metric("🌦️ Provincia menos lluviosa", f"{min_prov['anual']:.1f} mm", min_prov["Provincia"])
 col4.metric("📍 Provincias analizadas", len(df))
-
 st.markdown("---")
 
 # -----------------------------
@@ -132,16 +75,26 @@ st.markdown("---")
 # -----------------------------
 st.subheader("📈 Evolución mensual de precipitación")
 df_melt = data_filtrada.melt(id_vars=["Provincia"], value_vars=MESES, var_name="Mes", value_name="Precipitación")
-fig_line = px.line(df_melt, x="Mes", y="Precipitación",
-                   color="Provincia" if provincia_seleccion == "Todas" else None,
-                   markers=True, title="Precipitación mensual")
+fig_line = px.line(
+    df_melt,
+    x="Mes",
+    y="Precipitación",
+    color="Provincia" if provincia_seleccion == "Todas" else None,
+    markers=True,
+    title="Precipitación mensual"
+)
 st.plotly_chart(fig_line, use_container_width=True)
 
 # -----------------------------
 # ANNUAL RANKING PLOT
 # -----------------------------
 st.subheader("🏆 Ranking anual de precipitación por provincia")
-fig_bar = px.bar(df.sort_values("anual", ascending=False), x="Provincia", y="anual", title="Ranking anual (mm)")
+fig_bar = px.bar(
+    df.sort_values("anual", ascending=False),
+    x="Provincia",
+    y="anual",
+    title="Ranking anual (mm)"
+)
 st.plotly_chart(fig_bar, use_container_width=True)
 
 # -----------------------------

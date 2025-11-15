@@ -15,33 +15,48 @@ st.set_page_config(
 )
 
 # -----------------------------
-# LOAD CUSTOM CSS (FORCE BLUE SIDEBAR)
+# LOAD CUSTOM CSS (FORCE BLUE SIDEBAR + BLACK TEXT)
 # -----------------------------
 st.markdown("""
 <style>
 /* Barra lateral completa */
 [data-testid="stSidebar"] {
     background-color: #cce6ff !important;
+    color: #000 !important; /* Letras negras */
     padding-top: 10px !important;
 }
 
 /* Contenido de la barra lateral */
 [data-testid="stSidebarContent"] {
     padding-top: 10px !important;
+    color: #000 !important;
 }
 
-/* Sidebar headings spacing */
+/* Sidebar headings */
 [data-testid="stSidebarContent"] h2,
 [data-testid="stSidebarContent"] h3,
 [data-testid="stSidebarContent"] h4 {
     margin-top: 0 !important;
     padding-top: 0 !important;
+    color: #000 !important;
 }
 
 /* Opcional: selectbox spacing */
 [data-testid="stSidebar"] .stSelectbox {
     margin-top: 5px !important;
     margin-bottom: 5px !important;
+}
+
+/* Multi-page menu hack: azul + texto negro */
+.css-18e3th9, .css-1d391kg {
+    background-color: #cce6ff !important;
+    color: #000 !important;
+}
+
+/* Forzar color negro en links del menú lateral */
+.css-18e3th9 a, .css-1d391kg a {
+    color: #000 !important;
+    text-decoration: none;
 }
 </style>
 """, unsafe_allow_html=True)

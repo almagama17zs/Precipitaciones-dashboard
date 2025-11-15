@@ -102,18 +102,31 @@ PROV_MAPPING = {
 # -----------------------------
 # PREPARE DATA FOR MAP
 # -----------------------------
-df_map = df.groupby("Provincia", as_index=False).agg({mes: "mean"})
+
+# Convert all month columns to numeric
+for col in ["anual"] + MESES:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+# Keep all precipitation columns
+df_map = df.groupby("Provincia", as_index=False).agg(
+    {col: "mean" for col in ["anual"] + MESES}
+)
+
+# Map names to GeoJSON format
 df_map["geo_name"] = df_map["Provincia"].map(PROV_MAPPING)
 df_map["geo_norm"] = df_map["geo_name"].apply(normalize)
-
-# Ensure color column is numeric and fill NaN
-df_map[mes] = pd.to_numeric(df_map[mes], errors="coerce").fillna(0)
 
 # Filter only provinces present in GeoJSON
 plot_df = df_map[df_map["geo_norm"].isin(geo_names_set)].copy()
 if plot_df.empty:
     st.error("No matching provinces found between CSV and GeoJSON.")
     st.stop()
+
+# Make sure selected 'mes' exists
+if mes not in plot_df.columns:
+    st.error(f"Column '{mes}' not found in data.")
+    st.stop()
+
 
 # -----------------------------
 # CHOROPLETH MAPBOX

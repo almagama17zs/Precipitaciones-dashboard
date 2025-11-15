@@ -1,4 +1,4 @@
-# Page: Choropleth of precipitation by Spanish province (improved version)
+# Page: Choropleth of precipitation by Spanish province (robust version)
 import streamlit as st
 import pandas as pd
 import requests
@@ -17,15 +17,12 @@ st.sidebar.header("Map options")
 # LOAD DATA
 # -----------------------------
 df = load_precip_data()
-# Standardize column name for province
 if "region" in df.columns:
     df = df.rename(columns={"region": "Provincia"})
 
-# List of months
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
-# Sidebar selections
 mes = st.sidebar.selectbox("Month / Annual", options=["anual"] + MESES, index=0)
 provincia_seleccion = st.sidebar.selectbox("Highlight province", options=["Ninguna"] + sorted(df["Provincia"].unique()))
 
@@ -33,7 +30,7 @@ provincia_seleccion = st.sidebar.selectbox("Highlight province", options=["Ningu
 # NORMALIZATION FUNCTION
 # -----------------------------
 def normalize(s):
-    """Normalize text to lowercase ASCII for fuzzy matching."""
+    """Normalize text to lowercase ASCII for matching."""
     if s is None:
         return ""
     s = str(s).strip().lower()
@@ -51,10 +48,10 @@ GEOJSON_URL = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/
 try:
     geojson = requests.get(GEOJSON_URL, timeout=20).json()
 except Exception:
-    st.error("Could not load remote GeoJSON. Check your connection or use a local file.")
+    st.error("Could not load remote GeoJSON. Check connection or use a local file.")
     st.stop()
 
-# Normalize province names in GeoJSON
+# Normalize names in GeoJSON
 for f in geojson["features"]:
     f["properties"]["name_norm"] = normalize(f["properties"].get("name"))
 
@@ -106,15 +103,17 @@ PROV_MAPPING = {
 # -----------------------------
 df_map = df.groupby("Provincia", as_index=False).agg({mes: "mean"})
 df_map["geo_name"] = df_map["Provincia"].map(PROV_MAPPING)
-plot_df = df_map.dropna(subset=["geo_name"]).copy()
-plot_df["geo_norm"] = plot_df["geo_name"].apply(normalize)
+df_map["geo_norm"] = df_map["geo_name"].apply(normalize)
+# Ensure numeric color column
+df_map[mes] = pd.to_numeric(df_map[mes], errors="coerce").fillna(0)
 
-# Ensure color column is numeric
-plot_df[mes] = pd.to_numeric(plot_df[mes], errors="coerce").fillna(0).round(1)
+# Filter only rows with valid geo mapping
+plot_df = df_map[df_map["geo_norm"].isin([f["properties"]["name_norm"] for f in geojson["features"]])].copy()
 
-# Highlight the selected province
+# -----------------------------
+# HIGHLIGHT SELECTED PROVINCE
+# -----------------------------
 plot_df["highlight"] = plot_df["Provincia"].apply(lambda x: "Selected" if x == provincia_seleccion else "Normal")
-color_discrete_map = {"Selected": "red", "Normal": "blue"}
 
 # -----------------------------
 # CHOROPLETH MAPBOX PLOT
@@ -136,19 +135,6 @@ fig = px.choropleth_mapbox(
     title=f"Mapa de precipitación — {mes.capitalize()}"
 )
 
-# Optional: highlight province with marker (if lat/lon known, placeholder here)
-if provincia_seleccion != "Ninguna":
-    sel_row = plot_df[plot_df["Provincia"] == provincia_seleccion]
-    if not sel_row.empty:
-        fig.add_scattermapbox(
-            lat=[40], lon=[-4],  # Placeholder: replace with real lat/lon if available
-            mode="markers+text",
-            marker=dict(size=14, color="red"),
-            text=[provincia_seleccion],
-            textposition="top right",
-            showlegend=False
-        )
-
 fig.update_layout(
     margin={"r":0,"t":50,"l":0,"b":0},
     coloraxis_colorbar=dict(title="Precipitación (mm)", lenmode="fraction", len=0.6)
@@ -162,7 +148,5 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown("---")
 st.subheader("Datos de precipitación por provincia")
 st.dataframe(
-    plot_df[["Provincia", "anual"] + MESES]
-    .sort_values(mes, ascending=False)
-    .reset_index(drop=True)
+    plot_df[["Provincia", "anual"] + MESES].sort_values(mes, ascending=False).reset_index(drop=True)
 )

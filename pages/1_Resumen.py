@@ -90,7 +90,7 @@ st.markdown("---")
 # -----------------------------
 # HEATMAP: Precipitación mensual por provincia
 # -----------------------------
-st.subheader("🌡️ Heatmap — Precipitación mensual por provincia")
+st.subheader("🌡️ Mapa de Calor — Precipitación mensual por provincia")
 
 # English: Build a melt dataframe to create a heatmap-like chart.
 df_melt = df.melt(

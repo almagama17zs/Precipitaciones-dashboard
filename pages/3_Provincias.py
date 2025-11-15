@@ -1,4 +1,4 @@
-# Province analysis page: detailed KPIs and charts per province
+# Página de Provincias: KPIs detallados y comparativa
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -9,23 +9,24 @@ import folium
 from streamlit_folium import st_folium
 
 # -----------------------------
-# PAGE CONFIG
+# CONFIGURACIÓN DE LA PÁGINA
 # -----------------------------
 st.set_page_config(page_title="Provincias - Precipitaciones 2021", layout="wide")
 
 # -----------------------------
-# LOAD DATA
+# CARGAR DATOS
 # -----------------------------
 df = load_precip_data()
 
-# Standardize column name for province
+# Normalizar columna de provincia
 if "region" in df.columns:
     df = df.rename(columns={"region": "Provincia"})
 
-# Ensure numeric types
+# Columnas de meses
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
+# Asegurar tipos numéricos
 numeric_cols = [c for c in MESES + ["anual"] if c in df.columns]
 for c in numeric_cols:
     df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -39,7 +40,7 @@ top_n = st.sidebar.slider("Número de provincias en ranking (Top)", 5, 50, 10, 1
 mes_ranking = st.sidebar.selectbox("Mes para ranking:", ["anual"] + MESES, index=0)
 
 # -----------------------------
-# DATA FOR SELECTED PROVINCE
+# DATOS DE LA PROVINCIA SELECCIONADA
 # -----------------------------
 prov_df = df[df["Provincia"] == provincia].reset_index(drop=True)
 if prov_df.empty:
@@ -47,7 +48,7 @@ if prov_df.empty:
     st.stop()
 
 # -----------------------------
-# KPI CALCULATIONS
+# KPIs
 # -----------------------------
 anual_prov = float(prov_df["anual"].iloc[0])
 
@@ -68,7 +69,7 @@ posicion_ranking = int(
 )
 
 # -----------------------------
-# KPI DISPLAY
+# MOSTRAR KPIs
 # -----------------------------
 st.title(f"📍 Análisis — {provincia}")
 st.markdown("KPIs y visualizaciones detalladas de la provincia seleccionada.")
@@ -81,35 +82,28 @@ k4.metric("🏷 Ranking anual", f"{posicion_ranking} / {len(df)}")
 
 st.markdown("---")
 
-# ============================================================
-# ✅ MINI MAP — location of selected province
-# ============================================================
+# -----------------------------
+# MINI MAPA
+# -----------------------------
 st.subheader("🗺️ Ubicación de la provincia")
-
-# Create small map
 center_lat = prov_df["lat"].iloc[0] if "lat" in prov_df.columns else 40.0
 center_lon = prov_df["lon"].iloc[0] if "lon" in prov_df.columns else -3.7
 
 m = folium.Map(location=[center_lat, center_lon], zoom_start=7, tiles="CartoDB positron")
-
-# Marker for province
 folium.Marker(
     location=[center_lat, center_lon],
     popup=provincia,
     tooltip=provincia,
     icon=folium.Icon(color="blue")
 ).add_to(m)
-
-# Display map
 st_folium(m, width=500, height=350)
 
 st.markdown("---")
 
 # -----------------------------
-# LINE CHART — Province vs National mean
+# GRÁFICOS DE LÍNEA — Provincia vs Media Nacional
 # -----------------------------
 st.subheader("📈 Precipitación mensual — Provincia vs Media nacional")
-
 serie_prov = prov_df[MESES].T.reset_index()
 serie_prov.columns = ["Mes", "Valor"]
 serie_prov["Tipo"] = provincia
@@ -135,10 +129,9 @@ st.plotly_chart(fig_line, use_container_width=True)
 st.markdown("---")
 
 # -----------------------------
-# BAR CHART — Monthly series of province
+# BARRAS — Precipitación mensual provincia
 # -----------------------------
 st.subheader("📊 Precipitación por mes — Provincia seleccionada")
-
 fig_bar = px.bar(
     serie_prov,
     x="Mes",
@@ -152,10 +145,9 @@ st.plotly_chart(fig_bar, use_container_width=True)
 st.markdown("---")
 
 # -----------------------------
-# RANKING
+# RANKING TOP N
 # -----------------------------
 st.subheader(f"🏆 Ranking — Top {top_n} por '{mes_ranking}'")
-
 if mes_ranking not in df.columns:
     st.warning("La columna seleccionada no existe.")
 else:
@@ -173,12 +165,12 @@ else:
 
     if provincia in rank_df["Provincia"].values:
         pos = rank_df.index[rank_df["Provincia"] == provincia][0] + 1
-        st.write(f"{provincia} está en la posición **{pos}** del ranking para `{mes_ranking}`.")
+        st.write(f"{provincia} está en la posición **{pos}** del ranking para '{mes_ranking}'.")
 
 st.markdown("---")
 
 # -----------------------------
-# TABLE — Province vs National Mean
+# TABLA — Provincia vs Media Nacional
 # -----------------------------
 st.subheader("🧾 Datos detallados y comparativa")
 
@@ -193,7 +185,9 @@ fila_media["Tipo"] = "Media nacional"
 
 tabla = pd.concat([fila_prov, fila_media]).set_index("Tipo")
 
-st.dataframe(tabla.style.format("{:.1f}"))
+# ✅ FORMATEAR SOLO COLUMNAS NUMÉRICAS
+numericas = tabla.select_dtypes(include="number").columns
+st.dataframe(tabla.style.format({col: "{:.1f}" for col in numericas}))
 
 st.markdown("---")
 st.write("Sugerencias: cambia provincia, ajusta el Top o elige otro mes para explorar variaciones.")

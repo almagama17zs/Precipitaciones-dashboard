@@ -3,6 +3,7 @@ import plotly.express as px
 import pandas as pd
 from utils.load_data import load_precip_data
 from PIL import Image
+import os
 
 # -----------------------------
 # PAGE CONFIGURATION
@@ -16,20 +17,21 @@ st.set_page_config(
 # -----------------------------
 # LOAD CUSTOM CSS
 # -----------------------------
-try:
-    with open("assets/style.css") as f:
+css_path = "assets/style.css"
+if os.path.exists(css_path):
+    with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-except Exception as e:
-    st.error(f"No se pudo cargar el CSS: {e}")
+else:
+    st.warning(f"No se encontró {css_path}. Revisa la ruta.")
 
 # -----------------------------
 # SIDEBAR LOGO
 # -----------------------------
-try:
-    logo = Image.open("assets/logo.png")   # Cambia por tu nombre real si es diferente
-    st.sidebar.image(logo)
-except:
-    pass
+logo_path = "assets/logo.png"
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, use_column_width=True)
+else:
+    st.sidebar.warning("No se encontró logo en assets/logo.png")
 
 # -----------------------------
 # HEADER
@@ -46,14 +48,13 @@ if "Provincia" not in df.columns:
     st.error("No se encontró la columna 'Provincia' en los datos.")
     st.stop()
 
-MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-         "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+MESES = ["enero","febrero","marzo","abril","mayo","junio",
+         "julio","agosto","septiembre","octubre","noviembre","diciembre"]
 
 # -----------------------------
 # SIDEBAR — FILTERS
 # -----------------------------
 st.sidebar.header("Filtros")
-
 provincia_seleccion = st.sidebar.selectbox(
     "Provincia:",
     options=["Todas"] + sorted(df["Provincia"].unique())
